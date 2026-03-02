@@ -172,7 +172,7 @@
 
         .task-main {
             font-size: 16px;
-            color: hsl(271, 100%, 27%);
+            color: hwb(182 0% 0%);
             margin-bottom: 8px;
         }
 
@@ -197,6 +197,7 @@
             max-width: 100%;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
         }
 
         #taskList {
@@ -394,7 +395,7 @@
 
                         let imgHtml = "";
                         if (taskData.image) {
-                            imgHtml = `<div class=\"task-image\"><img src=\"${taskData.image}\" alt=\"ภาพประกอบ\"></div>`;
+                            imgHtml = `<div class="task-image"><img src="${taskData.image}" alt="ภาพประกอบ"></div>`;
                         }
 
                         div.innerHTML = `
@@ -409,6 +410,20 @@
                             <button class="delete-btn" onclick="deleteTask('${group}','${child.key}')">🗑️ ลบ</button>
                         `;
                         taskList.appendChild(div);
+
+                        // add click handler to image
+                        if (taskData.image) {
+                            const imgEl = div.querySelector('.task-image img');
+                            if (imgEl) {
+                                imgEl.style.cursor = 'pointer';
+                                imgEl.addEventListener('click', () => {
+                                    const w = window.open('', '_blank');
+                                    if (!w) return;
+                                    w.document.write(`<!DOCTYPE html><html><head><title>รูปงาน</title><meta charset="utf-8"></head><body style="margin:0;display:flex;align-items:center;justify-content:center;background:#000;"><img src="${taskData.image}" style="max-width:100%;max-height:100vh;"></body></html>`);
+                                    w.document.close();
+                                });
+                            }
+                        }
                     });
                 } else {
                     taskList.innerHTML = "<p style='color: rgba(255,255,255,0.5); margin-top: 20px;'>ยังไม่มีงานในกลุ่ม \"" + group + "\"</p>";
@@ -425,6 +440,8 @@
             const nameAdder = nameAdderInput.value.trim();
             const deadline = deadlineInput.value;
             const file = imageInput.files[0];
+
+            console.log("addBtn clicked", { group, text, nameAdder, deadline, file });
 
             if (!group || !text) {
                 alert("⚠️ กรอกชื่อกลุ่มและงาน");
@@ -446,101 +463,115 @@
             };
             if (imageData) payload.image = imageData;
 
-            push(ref(db, "tasks/" + group), payload).catch(error => {
-                console.error("Error adding task:", error);
-                alert("❌ เกิดข้อผิดพลาด");
-            });
+            push(ref(db, "tasks/" + group), payload)
+                .then(() => {
+                    // immediately refresh list
+                    loadTasks(group);
+                    alert("✅ เพิ่มงานเรียบร้อย");
+                })
+                .catch(error => {
+                    console.error("Error adding task:", error);
+                    alert("❌ เกิดข้อผิดพลาด");
+                });
 
             // รีเซ็ตฟอร์ม
             taskInput.value = "";
             nameAdderInput.value = "";
             deadlineInput.value = "";
             imageInput.value = "";
+        });
 
-            /* กด Enter เพิ่มงานได้ */
-            taskInput.addEventListener("keypress", (e) => {
-                if (e.key === "Enter") {
-                    addBtn.click();
-                }
-            });
+        /* กด Enter เพิ่มงานได้ */
+        taskInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                addBtn.click();
+            }
+        });
 
-            /* เปลี่ยนกลุ่ม - ตัดจากกลุ่มที่ตั้งชื่อ */
-            groupInput.addEventListener("change", () => {
-                const group = groupInput.value.trim();
-                if (group) {
+        /* เปลี่ยนกลุ่ม - ตัดจากกลุ่มที่ตั้งชื่อ */
+        groupInput.addEventListener("change", () => {
+            const group = groupInput.value.trim();
+            if (group) {
+                loadTasks(group);
+            }
+        });
+
+        // โหลดงานอัตโนมัติเมื่อเสร็จสิ้นการพิมพ์ชื่อกลุ่ม
+        let groupLoadTimeout;
+        groupInput.addEventListener("input", () => {
+            clearTimeout(groupLoadTimeout);
+            const group = groupInput.value.trim();
+            if (group && group.length >= 1) {
+                groupLoadTimeout = setTimeout(() => {
                     loadTasks(group);
-                }
-            });
+                }, 500);
+            }
+        });
 
-            // โหลดงานอัตโนมัติเมื่อเสร็จสิ้นการพิมพ์ชื่อกลุ่ม
-            let groupLoadTimeout;
-            groupInput.addEventListener("input", () => {
-                clearTimeout(groupLoadTimeout);
-                const group = groupInput.value.trim();
-                if (group && group.length >= 1) {
-                    groupLoadTimeout = setTimeout(() => {
-                        loadTasks(group);
-                    }, 500);
-                }
-            });
+        /* ลบงาน */
+        window.deleteTask = function (group, key) {
+            if (confirm("ต้องการลบงานนี้?")) {
+                remove(ref(db, "tasks/" + group + "/" + key)).catch(error => {
+                    console.error("Error deleting task:", error);
+                    alert("❌ ลบงานไม่สำเร็จ");
+                });
+            }
+        };
 
-            /* ลบงาน */
-            window.deleteTask = function (group, key) {
-                if (confirm("ต้องการลบงานนี้?")) {
-                    remove(ref(db, "tasks/" + group + "/" + key)).catch(error => {
-                        console.error("Error deleting task:", error);
-                        alert("❌ ลบงานไม่สำเร็จ");
-                    });
-                }
-            };
+        /* ระบบเพลง (iOS/Android สนับสนุน) */
+        musicBtn.addEventListener("click", async () => {
+            console.log("musicBtn clicked, paused?", music.paused);
+            try {
+                // ตั้งค่าเบื้องต้น
+                music.volume = 1.0;
+                music.muted = false;
 
-            /* ระบบเพลง (iOS/Android สนับสนุน) */
-            musicBtn.addEventListener("click", async () => {
-                try {
-                    // ตั้งค่าเบื้องต้น
-                    music.volume = 1.0;
-                    music.muted = false;
-
-                    if (music.paused) {
-                        // พยายามเล่นเพลง
-                        const playPromise = music.play();
-                        if (playPromise !== undefined) {
-                            playPromise
-                                .then(() => {
-                                    musicBtn.innerText = "⏸️ ปิดเพลง";
-                                    console.log("เพลงเล่นแล้ว");
-                                })
-                                .catch(error => {
-                                    console.warn("Autoplay ถูกบล็อก:", error);
-                                    musicBtn.innerText = "🎵 เปิดเพลง";
-                                });
-                        }
-                    } else {
-                        music.pause();
-                        musicBtn.innerText = "🎵 เปิดเพลง";
+                if (music.paused) {
+                    // พยายามเล่นเพลง
+                    const playPromise = music.play();
+                    if (playPromise !== undefined) {
+                        playPromise
+                            .then(() => {
+                                musicBtn.innerText = "⏸️ ปิดเพลง";
+                                console.log("เพลงเล่นแล้ว");
+                            })
+                            .catch(error => {
+                                console.warn("Autoplay ถูกบล็อก:", error);
+                                musicBtn.innerText = "🎵 เปิดเพลง";
+                            });
                     }
-                } catch (error) {
-                    console.error("Audio error:", error);
-                    musicBtn.innerText = "❌ เพลงไม่ได้";
-                    setTimeout(() => {
-                        musicBtn.innerText = "🎵 เปิดเพลง";
-                    }, 2000);
+                } else {
+                    music.pause();
+                    musicBtn.innerText = "🎵 เปิดเพลง";
                 }
-            });
+            } catch (error) {
+                console.error("Audio error:", error);
+                musicBtn.innerText = "❌ เพลงไม่ได้";
+                setTimeout(() => {
+                    musicBtn.innerText = "🎵 เปิดเพลง";
+                }, 2000);
+            }
+        });
 
-            // ตั้งค่าการเล่นเพลง
-            music.addEventListener("play", () => {
-                console.log("Music started playing");
-            });
+        // ตั้งค่าการเล่นเพลง
+        music.addEventListener("play", () => {
+            console.log("Music started playing");
+        });
 
-            music.addEventListener("pause", () => {
-                console.log("Music paused");
-            });
+        music.addEventListener("pause", () => {
+            console.log("Music paused");
+        });
 
-            music.addEventListener("error", (e) => {
-                console.error("Audio playback error:", e);
-                musicBtn.innerText = "⚠️ ไฟล์เพลง";
-            });
+        music.addEventListener("error", (e) => {
+            console.error("Audio playback error:", e);
+            musicBtn.innerText = "⚠️ ไฟล์เพลง";
+            alert("❌ พบปัญหาโหลดไฟล์เพลง ตรวจสอบว่าไฟล์ VISIONSLOWED.mp3 หรือ .m4a อยู่ในโฟลเดอร์เดียวกับหน้า HTML");
+        });
+
+        // ถ้ามีกลุ่ม prefilled ให้โหลดทันที (เช่น reload หน้า)
+        if (groupInput.value.trim()) {
+            loadTasks(groupInput.value.trim());
+        }
     </script>
 
 </body>
