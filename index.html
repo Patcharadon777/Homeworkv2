@@ -61,6 +61,15 @@
             appearance: none;
         }
 
+        input[type="date"] {
+            color-scheme: dark;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
         input:focus {
             outline: none;
             border-color: #00ffcc;
@@ -131,6 +140,28 @@
             font-size: 15px;
             text-align: left;
             word-break: break-word;
+        }
+
+        .task-content {
+            margin-bottom: 10px;
+        }
+
+        .task-main {
+            font-size: 16px;
+            color: #00ffcc;
+            margin-bottom: 8px;
+        }
+
+        .task-info {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .task-info p {
+            margin: 5px 0;
         }
 
         .delete-btn {
@@ -230,8 +261,10 @@
     <div class="container">
         <h1>📚 Homework Tracker</h1>
 
-        <input type="text" id="groupName" placeholder="ชื่อกลุ่ม" autocomplete="off">
+        <input type="text" id="groupName" placeholder="ชื่อกลุ่ม (เช่น 6/4)" autocomplete="off">
         <input type="text" id="taskInput" placeholder="เพิ่มการบ้าน" autocomplete="off">
+        <input type="text" id="nameAdder" placeholder="ชื่อผู้เพิ่ม" autocomplete="off">
+        <input type="date" id="deadline" style="color-scheme: dark;">
 
         <button class="add-btn" id="addBtn">➕ เพิ่มงาน</button>
         <button class="music-btn" id="musicBtn">🎵 เปิดเพลง</button>
@@ -260,6 +293,8 @@
 
         const groupInput = document.getElementById("groupName");
         const taskInput = document.getElementById("taskInput");
+        const nameAdderInput = document.getElementById("nameAdder");
+        const deadlineInput = document.getElementById("deadline");
         const taskList = document.getElementById("taskList");
         const addBtn = document.getElementById("addBtn");
         const musicBtn = document.getElementById("musicBtn");
@@ -267,9 +302,19 @@
 
         let currentGroup = null;
 
+        // ดึงค่าในฟอร์ม
+        function getFormattedDate(dateString) {
+            if (!dateString) return "ไม่มีกำหนด";
+            const date = new Date(dateString);
+            return date.toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" });
+        }
+
         /* โหลดงาน */
         function loadTasks(group) {
-            if (!group) return;
+            if (!group) {
+                taskList.innerHTML = "";
+                return;
+            }
             currentGroup = group;
             const taskRef = ref(db, "tasks/" + group);
 
@@ -277,16 +322,26 @@
                 taskList.innerHTML = "";
                 if (snapshot.exists()) {
                     snapshot.forEach(child => {
+                        const taskData = child.val();
                         const div = document.createElement("div");
                         div.className = "task";
+                        const deadlineDisplay = getFormattedDate(taskData.deadline);
+                        const nameAdder = taskData.nameAdder || "ไม่ระบุ";
+
                         div.innerHTML = `
-                            <span>${child.val().text}</span>
+                            <div class="task-content">
+                                <div class="task-main"><strong>📝 ${taskData.text}</strong></div>
+                                <div class="task-info">
+                                    <p style="margin: 5px 0; font-size: 13px;">👤 ผู้เพิ่ม: <strong>${nameAdder}</strong></p>
+                                    <p style="margin: 5px 0; font-size: 13px;">📅 กำหนดส่ง: <strong>${deadlineDisplay}</strong></p>
+                                </div>
+                            </div>
                             <button class="delete-btn" onclick="deleteTask('${group}','${child.key}')">🗑️ ลบ</button>
                         `;
                         taskList.appendChild(div);
                     });
                 } else {
-                    taskList.innerHTML = "<p style='color: rgba(255,255,255,0.5); margin-top: 20px;'>ยังไม่มีงาน</p>";
+                    taskList.innerHTML = "<p style='color: rgba(255,255,255,0.5); margin-top: 20px;'>ยังไม่มีงานในกลุ่ม \"" + group + "\"</p>";
                 }
             }, (error) => {
                 console.error("Error loading tasks:", error);
@@ -297,6 +352,8 @@
         addBtn.addEventListener("click", () => {
             const group = groupInput.value.trim();
             const text = taskInput.value.trim();
+            const nameAdder = nameAdderInput.value.trim();
+            const deadline = deadlineInput.value;
 
             if (!group || !text) {
                 alert("⚠️ กรอกชื่อกลุ่มและงาน");
@@ -305,12 +362,18 @@
 
             push(ref(db, "tasks/" + group), {
                 text: text,
+                nameAdder: nameAdder,
+                deadline: deadline,
                 createdAt: new Date().toISOString()
             }).catch(error => {
                 console.error("Error adding task:", error);
                 alert("❌ เกิดข้อผิดพลาด");
             });
+
+            // รีเซ็ตฟอร์ม
             taskInput.value = "";
+            nameAdderInput.value = "";
+            deadlineInput.value = "";
         });
 
         /* กด Enter เพิ่มงานได้ */
@@ -320,11 +383,23 @@
             }
         });
 
-        /* เปลี่ยนกลุ่ม */
+        /* เปลี่ยนกลุ่ม - ตัดจากกลุ่มที่ตั้งชื่อ */
         groupInput.addEventListener("change", () => {
             const group = groupInput.value.trim();
             if (group) {
                 loadTasks(group);
+            }
+        });
+
+        // โหลดงานอัตโนมัติเมื่อเสร็จสิ้นการพิมพ์ชื่อกลุ่ม
+        let groupLoadTimeout;
+        groupInput.addEventListener("input", () => {
+            clearTimeout(groupLoadTimeout);
+            const group = groupInput.value.trim();
+            if (group && group.length >= 1) {
+                groupLoadTimeout = setTimeout(() => {
+                    loadTasks(group);
+                }, 500);
             }
         });
 
