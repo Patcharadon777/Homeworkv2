@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Homework">
+    <meta name="theme-color" content="#000000">
+    <title>Homework Tracker</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: white;
+            text-align: center;
+            background: black;
+        }
+
+        /* วิดีโอพื้นหลัง */
+        video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+            filter: brightness(45%);
+        }
+
+        .container {
+            padding: 20px;
+            max-width: 500px;
+            margin: auto;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin: 10px 0 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #00ffcc;
+            border-radius: 12px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #00ffcc;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .add-btn {
+            background: #00ffcc;
+            color: #000;
+        }
+
+        .add-btn:hover {
+            background: #00e6b8;
+        }
+
+        .add-btn:active {
+            background: #00e6b8;
+        }
+
+        .music-btn {
+            background: #ffcc00;
+            color: #000;
+        }
+
+        .music-btn:hover {
+            background: #ffb800;
+        }
+
+        .music-btn:active {
+            background: #ffb800;
+        }
+
+        .task {
+            background: rgba(0, 255, 204, 0.1);
+            border-left: 4px solid #00ffcc;
+            padding: 15px;
+            margin: 12px 0;
+            border-radius: 8px;
+            font-size: 15px;
+            text-align: left;
+            word-break: break-word;
+        }
+
+        .delete-btn {
+            background: #ff4444;
+            color: white;
+            margin-top: 10px;
+            padding: 12px 12px;
+            width: 100%;
+            font-size: 14px;
+            border-radius: 8px;
+        }
+
+        .delete-btn:hover {
+            background: #cc0000;
+        }
+
+        .delete-btn:active {
+            background: #cc0000;
+        }
+
+        /* ====== Mobile Responsive Design ====== */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                padding-bottom: 30px;
+            }
+
+            h1 {
+                font-size: 24px;
+                margin: 15px 0 20px;
+            }
+
+            input {
+                padding: 14px;
+                margin: 8px 0;
+                font-size: 16px;
+                border-radius: 10px;
+            }
+
+            button {
+                padding: 16px;
+                margin: 8px 0;
+                font-size: 16px;
+                border-radius: 10px;
+                min-height: 50px;
+            }
+
+            .task {
+                padding: 12px;
+                margin: 10px 0;
+                font-size: 14px;
+            }
+
+            .delete-btn {
+                padding: 10px;
+                font-size: 13px;
+                min-height: 44px;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 480px) {
+            .container {
+                padding: 12px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            input {
+                padding: 12px;
+                font-size: 16px;
+            }
+
+            button {
+                padding: 14px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- วิดีโอพื้นหลัง -->
+    <video autoplay muted loop playsinline>
+        <source src="blackhole.mp4" type="video/mp4">
+    </video>
+
+    <!-- เพลง (รองรับ iOS/Android) -->
+    <audio id="bgMusic" loop preload="auto" playsinline>
+        <source src="VISIONSLOWED.mp3" type="audio/mpeg">
+        <source src="VISIONSLOWED.m4a" type="audio/mp4">
+    </audio>
+
+    <div class="container">
+        <h1>📚 Homework Tracker</h1>
+
+        <input type="text" id="groupName" placeholder="ชื่อกลุ่ม" autocomplete="off">
+        <input type="text" id="taskInput" placeholder="เพิ่มการบ้าน" autocomplete="off">
+
+        <button class="add-btn" id="addBtn">➕ เพิ่มงาน</button>
+        <button class="music-btn" id="musicBtn">🎵 เปิดเพลง</button>
+
+        <div id="taskList"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+
+        /* 🔥 ใส่ config ของคุณ */
+        const firebaseConfig = {
+            apiKey: "AIzaSyAXcMead5BPSjbPorQ1jvhVqrK0h7r2Hxg",
+            authDomain: "dxnz-f64ac.firebaseapp.com",
+            databaseURL: "https://dxnz-f64ac-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "dxnz-f64ac",
+            storageBucket: "dxnz-f64ac.firebasestorage.app",
+            messagingSenderId: "983256071502",
+            appId: "1:983256071502:web:c5356cc2b2111b5263f21f",
+            measurementId: "G-V692SPV400"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const groupInput = document.getElementById("groupName");
+        const taskInput = document.getElementById("taskInput");
+        const taskList = document.getElementById("taskList");
+        const addBtn = document.getElementById("addBtn");
+        const musicBtn = document.getElementById("musicBtn");
+        const music = document.getElementById("bgMusic");
+
+        let currentGroup = null;
+
+        /* โหลดงาน */
+        function loadTasks(group) {
+            if (!group) return;
+            currentGroup = group;
+            const taskRef = ref(db, "tasks/" + group);
+
+            onValue(taskRef, (snapshot) => {
+                taskList.innerHTML = "";
+                if (snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        const div = document.createElement("div");
+                        div.className = "task";
+                        div.innerHTML = `
+                            <span>${child.val().text}</span>
+                            <button class="delete-btn" onclick="deleteTask('${group}','${child.key}')">🗑️ ลบ</button>
+                        `;
+                        taskList.appendChild(div);
+                    });
+                } else {
+                    taskList.innerHTML = "<p style='color: rgba(255,255,255,0.5); margin-top: 20px;'>ยังไม่มีงาน</p>";
+                }
+            }, (error) => {
+                console.error("Error loading tasks:", error);
+            });
+        }
+
+        /* เพิ่มงาน */
+        addBtn.addEventListener("click", () => {
+            const group = groupInput.value.trim();
+            const text = taskInput.value.trim();
+
+            if (!group || !text) {
+                alert("⚠️ กรอกชื่อกลุ่มและงาน");
+                return;
+            }
+
+            push(ref(db, "tasks/" + group), {
+                text: text,
+                createdAt: new Date().toISOString()
+            }).catch(error => {
+                console.error("Error adding task:", error);
+                alert("❌ เกิดข้อผิดพลาด");
+            });
+            taskInput.value = "";
+        });
+
+        /* กด Enter เพิ่มงานได้ */
+        taskInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                addBtn.click();
+            }
+        });
+
+        /* เปลี่ยนกลุ่ม */
+        groupInput.addEventListener("change", () => {
+            const group = groupInput.value.trim();
+            if (group) {
+                loadTasks(group);
+            }
+        });
+
+        /* ลบงาน */
+        window.deleteTask = function (group, key) {
+            if (confirm("ต้องการลบงานนี้?")) {
+                remove(ref(db, "tasks/" + group + "/" + key)).catch(error => {
+                    console.error("Error deleting task:", error);
+                    alert("❌ ลบงานไม่สำเร็จ");
+                });
+            }
+        };
+
+        /* ระบบเพลง (iOS/Android สนับสนุน) */
+        musicBtn.addEventListener("click", async () => {
+            try {
+                // ตั้งค่าเบื้องต้น
+                music.volume = 1.0;
+                music.muted = false;
+
+                if (music.paused) {
+                    // พยายามเล่นเพลง
+                    const playPromise = music.play();
+                    if (playPromise !== undefined) {
+                        playPromise
+                            .then(() => {
+                                musicBtn.innerText = "⏸️ ปิดเพลง";
+                                console.log("เพลงเล่นแล้ว");
+                            })
+                            .catch(error => {
+                                console.warn("Autoplay ถูกบล็อก:", error);
+                                musicBtn.innerText = "🎵 เปิดเพลง";
+                            });
+                    }
+                } else {
+                    music.pause();
+                    musicBtn.innerText = "🎵 เปิดเพลง";
+                }
+            } catch (error) {
+                console.error("Audio error:", error);
+                musicBtn.innerText = "❌ เพลงไม่ได้";
+                setTimeout(() => {
+                    musicBtn.innerText = "🎵 เปิดเพลง";
+                }, 2000);
+            }
+        });
+
+        // ตั้งค่าการเล่นเพลง
+        music.addEventListener("play", () => {
+            console.log("Music started playing");
+        });
+
+        music.addEventListener("pause", () => {
+            console.log("Music paused");
+        });
+
+        music.addEventListener("error", (e) => {
+            console.error("Audio playback error:", e);
+            musicBtn.innerText = "⚠️ ไฟล์เพลง";
+        });
+    </script>
+
+</body>
+
+</html>
