@@ -72,10 +72,42 @@
                 transform: translateY(30px);
             }
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            // Try to sync any locally-saved tasks to Firebase (run when DB rules now permit)
+            async function syncLocalToFirebase() {
+                const store=_getLocalStore();
+                const groups=Object.keys(store);
+                if ( !groups.length) return;
+                console.log('syncLocalToFirebase: found local groups', groups);
+
+                for (const g of groups) {
+                    const arr=(store[g] || []).slice();
+
+                    for (const task of arr) {
+                        try {
+                            await push(ref(db, 'tasks/' + g), {
+                                text: task.text,
+                                nameAdder: task.nameAdder,
+                                deadline: task.deadline,
+                                createdAt: task.createdAt || new Date().toISOString(),
+                                image: task.image || null
+                            });
+                        removeLocalTask(g, task.id);
+                        console.log('synced local task', task.id, 'to group', g);
+                    }
+
+                    catch (err) {
+                        console.warn('sync failed for task', task.id, err);
+                    }
+                }
             }
+
+            alert('🔄 ซิงก์งานจากเครื่องไปยัง Firebase เสร็จสิ้น (ถ้ามี)');
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
         }
 
         .login-box h2 {
@@ -658,6 +690,91 @@
 
             let currentGroup = null;
 
+            // --- Local fallback storage (used when Firebase permissions block access) ---
+            function _getLocalStore() {
+                try {
+                    const raw = localStorage.getItem('localTasks');
+                    return raw ? JSON.parse(raw) : {};
+                } catch (e) {
+                    console.warn('localTasks parse failed', e);
+                    localStorage.removeItem('localTasks');
+                    return {};
+                }
+            }
+
+            function _saveLocalStore(obj) {
+                try {
+                    localStorage.setItem('localTasks', JSON.stringify(obj));
+                } catch (e) {
+                    console.error('saving localTasks failed', e);
+                }
+            }
+
+            function saveLocalTask(group, payload) {
+                const store = _getLocalStore();
+                if (!store[group]) store[group] = [];
+                const id = 'local-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+                const item = Object.assign({ id: id }, payload);
+                store[group].push(item);
+                _saveLocalStore(store);
+                return id;
+            }
+
+            function removeLocalTask(group, key) {
+                const store = _getLocalStore();
+                if (!store[group]) return false;
+                const before = store[group].length;
+                store[group] = store[group].filter(t => t.id !== key);
+                _saveLocalStore(store);
+                return store[group].length < before;
+            }
+
+            function loadLocalTasks(group) {
+                const store = _getLocalStore();
+                const arr = store[group] || [];
+                renderTasksFromArray(arr, group);
+            }
+
+            function renderTasksFromArray(arr, group) {
+                taskList.innerHTML = '';
+                if (!arr || arr.length === 0) {
+                    taskList.innerHTML = "<p style='color: rgba(255,255,255,0.5); margin-top: 20px;'>ยังไม่มีงานในกลุ่ม \"" + group + "\"</p>";
+                    return;
+                }
+                arr.forEach(task => {
+                    const div = document.createElement('div');
+                    div.className = 'task';
+                    const deadlineDisplay = task.deadline ? new Date(task.deadline).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : 'ไม่มีกำหนด';
+                    const nameAdder = task.nameAdder || 'ไม่ระบุ';
+                    let imgHtml = '';
+                    if (task.image) imgHtml = `<div class="task-image"><img src="${task.image}" alt="ภาพประกอบ"></div>`;
+                    div.innerHTML = `
+                        <div class="task-content">
+                            <div class="task-main"><strong>📝 ${task.text}</strong></div>
+                            ${imgHtml}
+                            <div class="task-info">
+                                <p style="margin: 5px 0; font-size: 13px;">👤 ผู้เพิ่ม: <strong>${nameAdder}</strong></p>
+                                <p style="margin: 5px 0; font-size: 13px;">📅 กำหนดส่ง: <strong>${deadlineDisplay}</strong></p>
+                            </div>
+                        </div>
+                        <button class="delete-btn" onclick="deleteTask('${group}','${task.id}')">🗑️ ลบ</button>
+                    `;
+                    taskList.appendChild(div);
+                    if (task.image) {
+                        const imgEl = div.querySelector('.task-image img');
+                        if (imgEl) {
+                            imgEl.style.cursor = 'pointer';
+                            imgEl.addEventListener('click', () => {
+                                const w = window.open('', '_blank');
+                                if (!w) return;
+                                w.document.write(`<!DOCTYPE html><html><head><title>รูปงาน</title><meta charset="utf-8"></head><body style="margin:0;display:flex;align-items:center;justify-content:center;background:#000;"><img src="${task.image}" style="max-width:100%;max-height:100vh;"></body></html>`);
+                                w.document.close();
+                            });
+                        }
+                    }
+                });
+            }
+
             function getFormattedDate(dateString) {
                 if (!dateString) return "ไม่มีกำหนด";
                 const date = new Date(dateString);
@@ -728,6 +845,8 @@
                     }
                 }, (error) => {
                     console.error("Error loading tasks:", error);
+                    // fallback to local storage when permission denied or other errors
+                    loadLocalTasks(group);
                 });
             }
 
@@ -765,7 +884,15 @@
                     })
                     .catch(error => {
                         console.error("Error adding task:", error);
-                        alert("❌ เกิดข้อผิดพลาด");
+                        // fallback to local store when permission denied
+                        try {
+                            const localId = saveLocalTask(group, payload);
+                            loadLocalTasks(group);
+                            alert("⚠️ บันทึกงานไว้ในเครื่อง (offline): " + localId);
+                        } catch (e) {
+                            console.error('local fallback failed', e);
+                            alert("❌ เกิดข้อผิดพลาด");
+                        }
                     });
 
                 taskInput.value = "";
@@ -800,9 +927,19 @@
 
             window.deleteTask = function (group, key) {
                 if (confirm("ต้องการลบงานนี้?")) {
-                    remove(ref(db, "tasks/" + group + "/" + key)).catch(error => {
+                    remove(ref(db, "tasks/" + group + "/" + key)).then(() => {
+                        // reload tasks (firebase will update)
+                        loadTasks(group);
+                    }).catch(error => {
                         console.error("Error deleting task:", error);
-                        alert("❌ ลบงานไม่สำเร็จ");
+                        // try local fallback delete
+                        const ok = removeLocalTask(group, key);
+                        if (ok) {
+                            loadLocalTasks(group);
+                            alert('✅ ลบงานจากเครื่องเรียบร้อย');
+                        } else {
+                            alert("❌ ลบงานไม่สำเร็จ");
+                        }
                     });
                 }
             };
@@ -844,6 +981,17 @@
 
             if (groupInput.value.trim()) {
                 loadTasks(groupInput.value.trim());
+            }
+
+            // If local tasks exist (from previous offline saves) try to sync them now
+            try {
+                const local = _getLocalStore();
+                if (Object.keys(local).length) {
+                    // attempt sync in background
+                    syncLocalToFirebase().catch(e => console.warn('background sync error', e));
+                }
+            } catch (e) {
+                console.warn('local store check failed', e);
             }
         };
 
