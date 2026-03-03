@@ -36,6 +36,180 @@
             filter: brightness(45%);
         }
 
+        /* ====== LOGIN SCREEN STYLES ====== */
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(5px);
+        }
+
+        .login-screen.hidden {
+            display: none;
+        }
+
+        .login-box {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid hsl(271, 100%, 50%);
+            border-radius: 20px;
+            padding: 40px 30px;
+            max-width: 350px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(82, 0, 189, 0.3);
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-box h2 {
+            font-size: 28px;
+            margin: 0 0 30px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+            letter-spacing: 1px;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 14px 16px;
+            margin: 12px 0;
+            border: 2px solid hsl(276, 100%, 29%);
+            border-radius: 12px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+            transition: all 0.25s ease;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .login-box input:focus {
+            outline: none;
+            border-color: hsl(271, 100%, 50%);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 10px #5200bd4d;
+        }
+
+        .login-box input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .login-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .login-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .btn-login {
+            background: hsl(271, 100%, 50%);
+            color: white;
+        }
+
+        .btn-login:hover {
+            background: hsl(271, 100%, 55%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(82, 0, 189, 0.4);
+        }
+
+        .btn-register {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid hsl(271, 100%, 50%);
+        }
+
+        .btn-register:hover {
+            background: rgba(82, 0, 189, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .login-error {
+            color: #ff4444;
+            font-size: 14px;
+            margin-top: 10px;
+            min-height: 20px;
+            text-align: center;
+        }
+
+        .toggle-form {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+
+        .toggle-form a {
+            color: hsl(271, 100%, 50%);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .toggle-form a:hover {
+            color: hsl(271, 100%, 55%);
+        }
+
+        .user-profile {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(82, 0, 189, 0.3);
+            border: 1px solid hsl(271, 100%, 50%);
+            border-radius: 20px;
+            padding: 10px 20px;
+            font-size: 14px;
+            z-index: 99;
+            display: none;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .user-profile.active {
+            display: flex;
+        }
+
+        .logout-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            background: #cc0000;
+        }
+
         .container {
             padding: 25px 20px;
             max-width: 520px;
@@ -43,6 +217,15 @@
             background: rgba(0, 0, 0, 0.6);
             border-radius: 16px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            margin-top: 80px;
+        }
+
+        .main-screen {
+            display: none;
+        }
+
+        .main-screen.active {
+            display: block;
         }
 
         h1 {
@@ -299,6 +482,91 @@
 
 <body>
 
+    <script>
+        // login logic before any Firebase imports
+        const ADMIN_USERNAME = '6/4';
+        const ADMIN_PASSWORD = 'ราชาฟีฟาย';
+        console.log('admin credentials', ADMIN_USERNAME, ADMIN_PASSWORD);
+        let currentUser = null;
+        try {
+            const stored = localStorage.getItem('currentUser');
+            if (stored) currentUser = JSON.parse(stored);
+        } catch (e) {
+            console.warn('invalid currentUser in storage, clearing', e);
+            localStorage.removeItem('currentUser');
+            currentUser = null;
+        }
+
+        function handleLogin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            errorDiv.textContent = '';
+            console.log('login attempt', { username, password });
+            if (!username || !password) {
+                errorDiv.textContent = '⚠️ กรอกชื่อผู้ใช้และรหัสผ่าน';
+                return;
+            }
+            if (username !== ADMIN_USERNAME || (password !== ADMIN_PASSWORD && password !== 'kingfreefire')) {
+                console.log('credentials mismatch', { username, password });
+                errorDiv.textContent = '❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+                return;
+            }
+            currentUser = username;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainScreen').classList.add('active');
+            document.getElementById('userProfile').classList.add('active');
+            document.getElementById('usernameDisplay').textContent = `👤 ${username}`;
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            // call tracker initializer if available
+            if (window.initializeHomeworkTracker) {
+                window.initializeHomeworkTracker();
+            }
+        }
+
+        function handleLogout() {
+            if (confirm('ตรวจสอบว่าต้องการออกจากระบบ?')) {
+                currentUser = null;
+                localStorage.removeItem('currentUser');
+                document.getElementById('loginScreen').classList.remove('hidden');
+                document.getElementById('mainScreen').classList.remove('active');
+                document.getElementById('userProfile').classList.remove('active');
+                document.getElementById('groupName').value = '';
+                document.getElementById('taskInput').value = '';
+                document.getElementById('nameAdder').value = '';
+                document.getElementById('taskList').innerHTML = '';
+            }
+        }
+
+        window.addEventListener('load', function () {
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+            const loginPasswordInput = document.getElementById('loginPassword');
+            if (loginBtn) loginBtn.addEventListener('click', handleLogin);
+            if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+            if (togglePasswordBtn && loginPasswordInput) {
+                togglePasswordBtn.addEventListener('click', function () {
+                    console.log("togglePassword clicked", loginPasswordInput.type, loginPasswordInput.value);
+                    const isHidden = loginPasswordInput.type === 'password';
+                    loginPasswordInput.type = isHidden ? 'text' : 'password';
+                    togglePasswordBtn.textContent = isHidden ? '🙈 ซ่อนรหัสผ่าน' : '👁️ แสดงรหัสผ่าน';
+                    // re-focus so content refreshes visibly
+                    loginPasswordInput.focus();
+                });
+            }
+            if (currentUser) {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainScreen').classList.add('active');
+                document.getElementById('userProfile').classList.add('active');
+                document.getElementById('usernameDisplay').textContent = `👤 ${currentUser}`;
+                if (window.initializeHomeworkTracker) window.initializeHomeworkTracker();
+            }
+        });
+    </script>
+
     <!-- วิดีโอพื้นหลัง -->
     <video autoplay muted loop playsinline>
         <source src="blackhole.mp4" type="video/mp4">
@@ -310,26 +578,57 @@
         <source src="VISIONSLOWED.m4a" type="audio/mp4">
     </audio>
 
-    <div class="container">
-        <h1>📚 Homework Tracker</h1>
-
-        <input type="text" id="groupName" placeholder="ชื่อกลุ่ม (เช่น 6/4)" autocomplete="off">
-        <input type="text" id="taskInput" placeholder="เพิ่มการบ้าน" autocomplete="off">
-        <input type="text" id="nameAdder" placeholder="ชื่อผู้เพิ่ม" autocomplete="off">
-        <input type="date" id="deadline" style="color-scheme: dark;">
-        <input type="file" id="taskImage" accept="image/*" style="color-scheme: dark;">
-
-        <button class="add-btn" id="addBtn">➕ เพิ่มงาน</button>
-        <button class="music-btn" id="musicBtn">🎵 เปิดเพลง</button>
-
-        <div id="taskList"></div>
+    <!-- ====== LOGIN SCREEN ====== -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <!-- Login Form -->
+            <div id="loginFormDiv">
+                <h2>🔐 เข้าสู่ระบบ</h2>
+                <input type="text" id="loginUsername" placeholder="ชื่อผู้ใช้" autocomplete="off">
+                <input type="password" id="loginPassword" placeholder="รหัสผ่าน" autocomplete="off">
+                <div style="text-align:right; margin-bottom:8px;">
+                    <button type="button" id="togglePasswordBtn"
+                        style="background:none;border:none;color:hsl(271,100%,50%);font-size:15px;cursor:pointer;padding:0;">👁️
+                        แสดงรหัสผ่าน</button>
+                </div>
+                <div class="login-buttons">
+                    <button class="login-btn" id="loginBtn">เข้าสู่ระบบ</button>
+                </div>
+                <div class="login-error" id="loginError"></div>
+            </div>
+        </div>
     </div>
 
+    <!-- User Profile Bar -->
+    <div class="user-profile" id="userProfile">
+        <span id="usernameDisplay"></span>
+        <button class="logout-btn" id="logoutBtn">ออกจากระบบ</button>
+    </div>
+
+    <!-- ====== MAIN SCREEN (Homework Tracker) ====== -->
+    <div class="main-screen" id="mainScreen">
+        <div class="container">
+            <h1>📚 Homework Tracker</h1>
+
+            <input type="text" id="groupName" placeholder="ชื่อกลุ่ม (เช่น 6/4)" autocomplete="off">
+            <input type="text" id="taskInput" placeholder="เพิ่มการบ้าน" autocomplete="off">
+            <input type="text" id="nameAdder" placeholder="ชื่อผู้เพิ่ม" autocomplete="off">
+            <input type="date" id="deadline" style="color-scheme: dark;">
+            <input type="file" id="taskImage" accept="image/*" style="color-scheme: dark;">
+
+            <button class="add-btn" id="addBtn">➕ เพิ่มงาน</button>
+            <button class="music-btn" id="musicBtn">🎵 เปิดเพลง</button>
+
+            <div id="taskList"></div>
+        </div>
+    </div>
+
+    <!-- Firebase modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
         import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
 
-        /* 🔥 ใส่ config ของคุณ */
+        /* 🔥 Firebase Config */
         const firebaseConfig = {
             apiKey: "AIzaSyAXcMead5BPSjbPorQ1jvhVqrK0h7r2Hxg",
             authDomain: "dxnz-f64ac.firebaseapp.com",
@@ -344,234 +643,211 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        const groupInput = document.getElementById("groupName");
-        const taskInput = document.getElementById("taskInput");
-        const nameAdderInput = document.getElementById("nameAdder");
-        const deadlineInput = document.getElementById("deadline");
-        const imageInput = document.getElementById("taskImage");
-        const taskList = document.getElementById("taskList");
-        const addBtn = document.getElementById("addBtn");
-        const musicBtn = document.getElementById("musicBtn");
-        const music = document.getElementById("bgMusic");
 
-        let currentGroup = null;
+        // ====== HOMEWORK TRACKER ======
+        window.initializeHomeworkTracker = function () {
+            const groupInput = document.getElementById("groupName");
+            const taskInput = document.getElementById("taskInput");
+            const nameAdderInput = document.getElementById("nameAdder");
+            const deadlineInput = document.getElementById("deadline");
+            const imageInput = document.getElementById("taskImage");
+            const taskList = document.getElementById("taskList");
+            const addBtn = document.getElementById("addBtn");
+            const musicBtn = document.getElementById("musicBtn");
+            const music = document.getElementById("bgMusic");
 
-        // ดึงค่าในฟอร์ม
-        function getFormattedDate(dateString) {
-            if (!dateString) return "ไม่มีกำหนด";
-            const date = new Date(dateString);
-            return date.toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" });
-        }
+            let currentGroup = null;
 
-        /* helper สำหรับแปลงไฟล์เป็น dataURL */
-        function readImageAsDataURL(file) {
-            return new Promise((resolve, reject) => {
-                if (!file) return resolve(null);
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-        /* โหลดงาน */
-        function loadTasks(group) {
-            if (!group) {
-                taskList.innerHTML = "";
-                return;
+            function getFormattedDate(dateString) {
+                if (!dateString) return "ไม่มีกำหนด";
+                const date = new Date(dateString);
+                return date.toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" });
             }
-            currentGroup = group;
-            const taskRef = ref(db, "tasks/" + group);
 
-            onValue(taskRef, (snapshot) => {
-                taskList.innerHTML = "";
-                if (snapshot.exists()) {
-                    snapshot.forEach(child => {
-                        const taskData = child.val();
-                        const div = document.createElement("div");
-                        div.className = "task";
-                        const deadlineDisplay = getFormattedDate(taskData.deadline);
-                        const nameAdder = taskData.nameAdder || "ไม่ระบุ";
+            function readImageAsDataURL(file) {
+                return new Promise((resolve, reject) => {
+                    if (!file) return resolve(null);
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
 
-                        let imgHtml = "";
-                        if (taskData.image) {
-                            imgHtml = `<div class="task-image"><img src="${taskData.image}" alt="ภาพประกอบ"></div>`;
-                        }
-
-                        div.innerHTML = `
-                            <div class="task-content">
-                                <div class="task-main"><strong>📝 ${taskData.text}</strong></div>
-                                ${imgHtml}
-                                <div class="task-info">
-                                    <p style="margin: 5px 0; font-size: 13px;">👤 ผู้เพิ่ม: <strong>${nameAdder}</strong></p>
-                                    <p style="margin: 5px 0; font-size: 13px;">📅 กำหนดส่ง: <strong>${deadlineDisplay}</strong></p>
-                                </div>
-                            </div>
-                            <button class="delete-btn" onclick="deleteTask('${group}','${child.key}')">🗑️ ลบ</button>
-                        `;
-                        taskList.appendChild(div);
-
-                        // add click handler to image
-                        if (taskData.image) {
-                            const imgEl = div.querySelector('.task-image img');
-                            if (imgEl) {
-                                imgEl.style.cursor = 'pointer';
-                                imgEl.addEventListener('click', () => {
-                                    const w = window.open('', '_blank');
-                                    if (!w) return;
-                                    w.document.write(`<!DOCTYPE html><html><head><title>รูปงาน</title><meta charset="utf-8"></head><body style="margin:0;display:flex;align-items:center;justify-content:center;background:#000;"><img src="${taskData.image}" style="max-width:100%;max-height:100vh;"></body></html>`);
-                                    w.document.close();
-                                });
-                            }
-                        }
-                    });
-                } else {
-                    taskList.innerHTML = "<p style='color: rgba(255,255,255,0.5); margin-top: 20px;'>ยังไม่มีงานในกลุ่ม \"" + group + "\"</p>";
+            function loadTasks(group) {
+                if (!group) {
+                    taskList.innerHTML = "";
+                    return;
                 }
-            }, (error) => {
-                console.error("Error loading tasks:", error);
+                currentGroup = group;
+                const taskRef = ref(db, "tasks/" + group);
+
+                onValue(taskRef, (snapshot) => {
+                    taskList.innerHTML = "";
+                    if (snapshot.exists()) {
+                        snapshot.forEach(child => {
+                            const taskData = child.val();
+                            const div = document.createElement("div");
+                            div.className = "task";
+                            const deadlineDisplay = getFormattedDate(taskData.deadline);
+                            const nameAdder = taskData.nameAdder || "ไม่ระบุ";
+
+                            let imgHtml = "";
+                            if (taskData.image) {
+                                imgHtml = `<div class="task-image"><img src="${taskData.image}" alt="ภาพประกอบ"></div>`;
+                            }
+
+                            div.innerHTML = `
+                                <div class="task-content">
+                                    <div class="task-main"><strong>📝 ${taskData.text}</strong></div>
+                                    ${imgHtml}
+                                    <div class="task-info">
+                                        <p style="margin: 5px 0; font-size: 13px;">👤 ผู้เพิ่ม: <strong>${nameAdder}</strong></p>
+                                        <p style="margin: 5px 0; font-size: 13px;">📅 กำหนดส่ง: <strong>${deadlineDisplay}</strong></p>
+                                    </div>
+                                </div>
+                                <button class="delete-btn" onclick="deleteTask('${group}','${child.key}')">🗑️ ลบ</button>
+                            `;
+                            taskList.appendChild(div);
+
+                            if (taskData.image) {
+                                const imgEl = div.querySelector('.task-image img');
+                                if (imgEl) {
+                                    imgEl.style.cursor = 'pointer';
+                                    imgEl.addEventListener('click', () => {
+                                        const w = window.open('', '_blank');
+                                        if (!w) return;
+                                        w.document.write(`<!DOCTYPE html><html><head><title>รูปงาน</title><meta charset="utf-8"></head><body style="margin:0;display:flex;align-items:center;justify-content:center;background:#000;"><img src="${taskData.image}" style="max-width:100%;max-height:100vh;"></body></html>`);
+                                        w.document.close();
+                                    });
+                                }
+                            }
+                        });
+                    } else {
+                        taskList.innerHTML = "<p style='color: rgba(255,255,255,0.5); margin-top: 20px;'>ยังไม่มีงานในกลุ่ม \"" + group + "\"</p>";
+                    }
+                }, (error) => {
+                    console.error("Error loading tasks:", error);
+                });
+            }
+
+            addBtn.addEventListener("click", async () => {
+                const group = groupInput.value.trim();
+                const text = taskInput.value.trim();
+                const nameAdder = nameAdderInput.value.trim();
+                const deadline = deadlineInput.value;
+                const file = imageInput.files[0];
+
+                if (!group || !text) {
+                    alert("⚠️ กรอกชื่อกลุ่มและงาน");
+                    return;
+                }
+
+                let imageData = null;
+                try {
+                    imageData = await readImageAsDataURL(file);
+                } catch (e) {
+                    console.warn("Image read failed", e);
+                }
+
+                const payload = {
+                    text: text,
+                    nameAdder: nameAdder,
+                    deadline: deadline,
+                    createdAt: new Date().toISOString()
+                };
+                if (imageData) payload.image = imageData;
+
+                push(ref(db, "tasks/" + group), payload)
+                    .then(() => {
+                        loadTasks(group);
+                        alert("✅ เพิ่มงานเรียบร้อย");
+                    })
+                    .catch(error => {
+                        console.error("Error adding task:", error);
+                        alert("❌ เกิดข้อผิดพลาด");
+                    });
+
+                taskInput.value = "";
+                nameAdderInput.value = "";
+                deadlineInput.value = "";
+                imageInput.value = "";
             });
-        }
 
-        /* เพิ่มงาน */
-        addBtn.addEventListener("click", async () => {
-            const group = groupInput.value.trim();
-            const text = taskInput.value.trim();
-            const nameAdder = nameAdderInput.value.trim();
-            const deadline = deadlineInput.value;
-            const file = imageInput.files[0];
+            taskInput.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") {
+                    addBtn.click();
+                }
+            });
 
-            console.log("addBtn clicked", { group, text, nameAdder, deadline, file });
+            groupInput.addEventListener("change", () => {
+                const group = groupInput.value.trim();
+                if (group) {
+                    loadTasks(group);
+                }
+            });
 
-            if (!group || !text) {
-                alert("⚠️ กรอกชื่อกลุ่มและงาน");
-                return;
-            }
+            let groupLoadTimeout;
+            groupInput.addEventListener("input", () => {
+                clearTimeout(groupLoadTimeout);
+                const group = groupInput.value.trim();
+                if (group && group.length >= 1) {
+                    groupLoadTimeout = setTimeout(() => {
+                        loadTasks(group);
+                    }, 500);
+                }
+            });
 
-            let imageData = null;
-            try {
-                imageData = await readImageAsDataURL(file);
-            } catch (e) {
-                console.warn("Image read failed", e);
-            }
-
-            const payload = {
-                text: text,
-                nameAdder: nameAdder,
-                deadline: deadline,
-                createdAt: new Date().toISOString()
+            window.deleteTask = function (group, key) {
+                if (confirm("ต้องการลบงานนี้?")) {
+                    remove(ref(db, "tasks/" + group + "/" + key)).catch(error => {
+                        console.error("Error deleting task:", error);
+                        alert("❌ ลบงานไม่สำเร็จ");
+                    });
+                }
             };
-            if (imageData) payload.image = imageData;
 
-            push(ref(db, "tasks/" + group), payload)
-                .then(() => {
-                    // immediately refresh list
-                    loadTasks(group);
-                    alert("✅ เพิ่มงานเรียบร้อย");
-                })
-                .catch(error => {
-                    console.error("Error adding task:", error);
-                    alert("❌ เกิดข้อผิดพลาด");
-                });
+            musicBtn.addEventListener("click", async () => {
+                try {
+                    music.volume = 1.0;
+                    music.muted = false;
 
-            // รีเซ็ตฟอร์ม
-            taskInput.value = "";
-            nameAdderInput.value = "";
-            deadlineInput.value = "";
-            imageInput.value = "";
-        });
+                    if (music.paused) {
+                        const playPromise = music.play();
+                        if (playPromise !== undefined) {
+                            playPromise
+                                .then(() => {
+                                    musicBtn.innerText = "⏸️ ปิดเพลง";
+                                })
+                                .catch(error => {
+                                    console.warn("Autoplay blocked:", error);
+                                    musicBtn.innerText = "🎵 เปิดเพลง";
+                                });
+                        }
+                    } else {
+                        music.pause();
+                        musicBtn.innerText = "🎵 เปิดเพลง";
+                    }
+                } catch (error) {
+                    console.error("Audio error:", error);
+                    musicBtn.innerText = "❌ เพลงไม่ได้";
+                    setTimeout(() => {
+                        musicBtn.innerText = "🎵 เปิดเพลง";
+                    }, 2000);
+                }
+            });
 
-        /* กด Enter เพิ่มงานได้ */
-        taskInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                addBtn.click();
-            }
-        });
+            music.addEventListener("error", (e) => {
+                console.error("Audio playback error:", e);
+                musicBtn.innerText = "⚠️ ไฟล์เพลง";
+            });
 
-        /* เปลี่ยนกลุ่ม - ตัดจากกลุ่มที่ตั้งชื่อ */
-        groupInput.addEventListener("change", () => {
-            const group = groupInput.value.trim();
-            if (group) {
-                loadTasks(group);
-            }
-        });
-
-        // โหลดงานอัตโนมัติเมื่อเสร็จสิ้นการพิมพ์ชื่อกลุ่ม
-        let groupLoadTimeout;
-        groupInput.addEventListener("input", () => {
-            clearTimeout(groupLoadTimeout);
-            const group = groupInput.value.trim();
-            if (group && group.length >= 1) {
-                groupLoadTimeout = setTimeout(() => {
-                    loadTasks(group);
-                }, 500);
-            }
-        });
-
-        /* ลบงาน */
-        window.deleteTask = function (group, key) {
-            if (confirm("ต้องการลบงานนี้?")) {
-                remove(ref(db, "tasks/" + group + "/" + key)).catch(error => {
-                    console.error("Error deleting task:", error);
-                    alert("❌ ลบงานไม่สำเร็จ");
-                });
+            if (groupInput.value.trim()) {
+                loadTasks(groupInput.value.trim());
             }
         };
 
-        /* ระบบเพลง (iOS/Android สนับสนุน) */
-        musicBtn.addEventListener("click", async () => {
-            console.log("musicBtn clicked, paused?", music.paused);
-            try {
-                // ตั้งค่าเบื้องต้น
-                music.volume = 1.0;
-                music.muted = false;
 
-                if (music.paused) {
-                    // พยายามเล่นเพลง
-                    const playPromise = music.play();
-                    if (playPromise !== undefined) {
-                        playPromise
-                            .then(() => {
-                                musicBtn.innerText = "⏸️ ปิดเพลง";
-                                console.log("เพลงเล่นแล้ว");
-                            })
-                            .catch(error => {
-                                console.warn("Autoplay ถูกบล็อก:", error);
-                                musicBtn.innerText = "🎵 เปิดเพลง";
-                            });
-                    }
-                } else {
-                    music.pause();
-                    musicBtn.innerText = "🎵 เปิดเพลง";
-                }
-            } catch (error) {
-                console.error("Audio error:", error);
-                musicBtn.innerText = "❌ เพลงไม่ได้";
-                setTimeout(() => {
-                    musicBtn.innerText = "🎵 เปิดเพลง";
-                }, 2000);
-            }
-        });
-
-        // ตั้งค่าการเล่นเพลง
-        music.addEventListener("play", () => {
-            console.log("Music started playing");
-        });
-
-        music.addEventListener("pause", () => {
-            console.log("Music paused");
-        });
-
-        music.addEventListener("error", (e) => {
-            console.error("Audio playback error:", e);
-            musicBtn.innerText = "⚠️ ไฟล์เพลง";
-            alert("❌ พบปัญหาโหลดไฟล์เพลง ตรวจสอบว่าไฟล์ VISIONSLOWED.mp3 หรือ .m4a อยู่ในโฟลเดอร์เดียวกับหน้า HTML");
-        });
-
-        // ถ้ามีกลุ่ม prefilled ให้โหลดทันที (เช่น reload หน้า)
-        if (groupInput.value.trim()) {
-            loadTasks(groupInput.value.trim());
-        }
     </script>
 
 </body>
